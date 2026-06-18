@@ -1,0 +1,37 @@
+{
+  "overall_score": 92,
+  "keyword_match_rate": 0.85,
+  "matched_keywords": [
+    "Artificial Intelligence",
+    "Machine Learning",
+    "Deep Learning",
+    "Natural Language Processing",
+    "Data Science",
+    "Python",
+    "Programming",
+    "AI Development",
+    "Computer Vision",
+    "Data Analysis",
+    "Algorithmic Thinking",
+    "Software Development",
+    "Technical Skills",
+    "Innovation"
+  ],
+  "missing_keywords": [
+    "Internship"
+  ],
+  "strengths": [
+    "Strong technical skills in AI, ML, and DL with hands-on experience in PyTorch, TensorFlow, and Scikit-learn",
+    "Impressive project portfolio showcasing innovative applications of AI and ML",
+    "Excellent educational background with a strong CGPA in AI and Machine Learning"
+  ],
+  "improvements": [
+    "Lack of explicit internship experience, which is a required keyword",
+    "Limited mention of collaboration and teamwork, which is essential for AI development",
+    "No clear mention of career goals or motivation for pursuing a career in AI"
+  ],
+  "job_id": "j_9999999999999",
+  "job_title": "AI Intern (scraped)",
+  "company": "Internshala",
+  "scored_at": "2026-06-18T08:51:48.262Z"
+}
