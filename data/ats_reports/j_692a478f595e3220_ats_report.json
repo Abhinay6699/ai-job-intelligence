@@ -1,0 +1,38 @@
+{
+  "overall_score": 92,
+  "keyword_match_rate": 0.85,
+  "matched_keywords": [
+    "Artificial Intelligence",
+    "Machine Learning",
+    "Deep Learning",
+    "Natural Language Processing",
+    "Python",
+    "Data Science",
+    "Internship",
+    "AI Development",
+    "Computer Vision",
+    "Data Analysis",
+    "Algorithmic Thinking",
+    "Programming",
+    "Software Development",
+    "Technical Skills",
+    "Data Modeling"
+  ],
+  "missing_keywords": [
+    "Data Analysis"
+  ],
+  "strengths": [
+    "Strong technical skills in AI and Machine Learning",
+    "Experience with multiple AI-powered projects",
+    "Proficiency in Python and relevant libraries"
+  ],
+  "improvements": [
+    "More emphasis on data analysis and data modeling",
+    "Include specific metrics or achievements in experience section",
+    "Consider adding more certifications or relevant coursework"
+  ],
+  "job_id": "j_692a478f595e3220",
+  "job_title": "AI Intern (scraped)",
+  "company": "Internshala",
+  "scored_at": "2026-06-18T08:22:50.044Z"
+}
