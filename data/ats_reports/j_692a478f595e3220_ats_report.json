@@ -1,0 +1,38 @@
+{
+  "overall_score": 92,
+  "keyword_match_rate": 0.85,
+  "matched_keywords": [
+    "Artificial Intelligence",
+    "Machine Learning",
+    "Deep Learning",
+    "Natural Language Processing",
+    "Python",
+    "Data Science",
+    "Internship",
+    "AI Development",
+    "Computer Vision",
+    "Data Analysis",
+    "Algorithmic Thinking",
+    "Programming",
+    "Software Development",
+    "Technical Skills",
+    "Data Modeling"
+  ],
+  "missing_keywords": [
+    "Data"
+  ],
+  "strengths": [
+    "Strong technical skills in AI and ML with hands-on experience in PyTorch, TensorFlow, and Scikit-learn",
+    "Proven ability to develop and deploy AI-powered projects, including EMERALD and Fake News Detection system",
+    "Excellent understanding of data science concepts, including data analysis, modeling, and computer vision"
+  ],
+  "improvements": [
+    "Include more details about the impact and results of the projects, such as metrics or statistics",
+    "Emphasize transferable skills, such as teamwork, communication, and problem-solving, in addition to technical skills",
+    "Consider adding relevant coursework, academic projects, or research experience to further demonstrate expertise in AI and ML"
+  ],
+  "job_id": "j_692a478f595e3220",
+  "job_title": "AI Intern (scraped)",
+  "company": "Internshala",
+  "scored_at": "2026-06-18T08:36:51.676Z"
+}
