@@ -1,0 +1,33 @@
+CONTACT INFORMATION
+Abhinay Sucharith Nannapaneni
+Email abhinaynannapaneni@gmail.com
+Phone 9640198656
+GitHub github.com/Abhinay6699
+Location Guntur, Andhra Pradesh
+
+EDUCATION
+B.Tech AI & Machine Learning, VVIT Guntur
+CGPA 8.35
+Graduating Sep 2026
+
+PROJECTS
+EMERALD - Developed a 10M parameter GPT-style decoder-only transformer using PyTorch, incorporating a custom BPE tokenizer and trained on Wikipedia data, with a live Flask inference server at abhinay7.netlify.app, showcasing expertise in Artificial Intelligence, Deep Learning, and Natural Language Processing
+Fake News Detection - Utilized TensorFlow and NLTK/SpaCy to create a model that detects fake news, leveraging TF-IDF and semantic features, with a Flask REST API, demonstrating skills in Machine Learning and Data Analysis
+AI Crop Prediction - Built a predictive model using Scikit-learn to forecast crop yields for 22 crops, with a FastAPI backend and a Flutter mobile app, highlighting proficiency in Data Science and Algorithmic Thinking
+Binance Trading Bot - Designed a trading bot using Typer CLI, httpx, and HMAC-SHA256, showcasing ability in Software Development and Technical Innovation
+
+SKILLS
+Programming languages - Python, JavaScript, Dart
+Frameworks and libraries - PyTorch, TensorFlow, Scikit-learn, Flask, FastAPI, NLTK, SpaCy, Pandas, NumPy
+Development experience - AI Development, Computer Vision, Neural Networks, Data Analysis, Software Development
+Tools and technologies - n8n, Flutter, GitHub
+
+CERTIFICATIONS
+NPTEL Elite - Introduction to Large Language Models, demonstrating expertise in Artificial Intelligence and Machine Learning
+
+LEADERSHIP EXPERIENCE
+ACM Membership Chair VVIT, promoting technical innovation and community engagement
+SIH 2025 Internal Selection, showcasing leadership skills and ability to work in a team environment, with a focus on Technical Innovation and Software Development
+
+INTERNSHIP EXPERIENCE
+Seeking an internship in AI Development, where I can apply my skills in Artificial Intelligence, Machine Learning, and Data Science to drive technical innovation and contribute to the development of cutting-edge AI solutions.
