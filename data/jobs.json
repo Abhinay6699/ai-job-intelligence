@@ -1,8 +1,26 @@
-{
-  "metadata": {
-    "last_updated": "2026-06-09T03:35:37.062Z",
-    "total_jobs": 0,
-    "new_today": 0
+[
+  {
+    "job_id": "j_692a478f595e3220",
+    "title": "AI Intern (scraped)",
+    "company": "Internshala",
+    "location": "India",
+    "url": "https://internshala.com/internships/artificial-intelligence-internship/",
+    "source": "Internshala_AI",
+    "scraped_at": "2026-06-18T03:55:06.705Z",
+    "relevance_score": 0,
+    "score_reason": "Not scored",
+    "scored_at": "2026-06-18T03:55:11.441Z"
   },
-  "jobs": []
-}
+  {
+    "job_id": "j_222c32c3788585bb",
+    "title": "ML Intern (scraped)",
+    "company": "Internshala",
+    "location": "India",
+    "url": "https://internshala.com/internships/machine-learning-internship/",
+    "source": "Internshala_ML",
+    "scraped_at": "2026-06-18T03:55:07.561Z",
+    "relevance_score": 0,
+    "score_reason": "Not scored",
+    "scored_at": "2026-06-18T03:55:11.442Z"
+  }
+]
