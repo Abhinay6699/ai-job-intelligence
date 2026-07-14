@@ -1,21 +1,7 @@
 {
-  "id": "agent3emaildigest",
-  "name": "Agent 3 - Email Digest and Approval Handler",
-  "active": false,
-  "settings": {
-    "executionOrder": "v1",
-    "timezone": "Asia/Kolkata"
-  },
+  "name": "Agent 3 \u2014 Approval and Email Delivery",
   "nodes": [
     {
-      "id": "a3000000-0000-4000-8000-000000000001",
-      "name": "Digest Trigger 8 AM IST",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        0,
-        200
-      ],
       "parameters": {
         "rule": {
           "interval": [
@@ -25,43 +11,25 @@
             }
           ]
         }
-      }
-    },
-    {
-      "id": "a3000000-0000-4000-8000-000000000002",
-      "name": "Webhook Approve",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      },
+      "id": "d077b770-2636-447c-ab30-080ab3e204f9",
+      "name": "Schedule 8:00 AM IST",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
       "position": [
         0,
-        700
-      ],
-      "parameters": {
-        "path": "approve-job",
-        "httpMethod": "GET",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "webhookId": "approve-job"
+        0
+      ]
     },
     {
-      "id": "a3000000-0000-4000-8000-000000000003",
-      "name": "Fetch Jobs for Digest",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        220,
-        200
-      ],
       "parameters": {
-        "method": "GET",
-        "url": "=https://api.github.com/repos/{{ $env.GITHUB_REPO_OWNER }}/{{ $env.GITHUB_REPO_NAME }}/contents/data/jobs.json?ref=state",
+        "url": "={{ 'https://api.github.com/repos/' + $env.GITHUB_REPO_OWNER + '/' + $env.GITHUB_REPO_NAME + '/contents/' + 'data/jobs.json?ref=state' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+              "value": "={{ 'Bearer ' + $env.GITHUB_TOKEN }}"
             },
             {
               "name": "Accept",
@@ -72,106 +40,165 @@
         "options": {
           "response": {
             "response": {
-              "responseFormat": "json"
+              "neverError": true
             }
           }
         }
       },
-      "onError": "continueRegularOutput"
+      "id": "f0feca65-b63b-41cc-b18e-3ab804f0c22c",
+      "name": "Load Jobs for Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        272,
+        0
+      ]
     },
     {
-      "id": "a3000000-0000-4000-8000-000000000004",
-      "name": "Build Digest Email",
+      "parameters": {
+        "jsCode": "\nconst gh = $input.first().json;\nlet jobs = [];\ntry {\n  const db = JSON.parse(Buffer.from(gh.content, 'base64').toString('utf-8'));\n  jobs = db.jobs || [];\n} catch(e) { console.log('Jobs load error:', e.message); }\n\nconst today   = new Date().toISOString().slice(0, 10);\nconst sorted  = [...jobs].sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));\nconst top5    = sorted.slice(0, 5);\nconst interns = jobs\n  .filter(j => j.job_type === 'internship')\n  .sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0))\n  .slice(0, 3);\nconst remote  = jobs\n  .filter(j => /remote/i.test(j.location || ''))\n  .sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0))\n  .slice(0, 3);\nconst avg     = jobs.length\n  ? (jobs.reduce((s, j) => s + (j.relevance_score || 0), 0) / jobs.length).toFixed(1) : 0;\nconst newToday = jobs.filter(j => j.date_found && j.date_found.startsWith(today)).length;\n\nreturn [{ json: { total: jobs.length, new_today: newToday, top5, interns, remote, avg } }];\n"
+      },
+      "id": "82b58297-ab56-4164-87ae-2da4c250f473",
+      "name": "Build Digest Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        440,
-        200
-      ],
-      "parameters": {
-        "jsCode": "const raw = items[0].json;\nlet jobs = [];\ntry {\n  const decoded = Buffer.from(raw.content, 'base64').toString('utf8');\n  jobs = JSON.parse(decoded);\n  if (!Array.isArray(jobs)) jobs = [];\n} catch (e) {\n  jobs = [];\n}\n\njobs.sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));\nconst top5 = jobs.slice(0, 5);\n\nconst today = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Kolkata' });\n\nconst scoreBar = (score) => {\n  const filled = Math.round(score / 10);\n  return '\\u2588'.repeat(filled) + '\\u2591'.repeat(10 - filled) + ` ${score}/100`;\n};\n\nconst n8nBaseUrl = $env.N8N_WEBHOOK_URL || 'http://localhost:5678';\n\nconst jobCards = top5.map((j, i) => `\n      <div style=\"background:#1e293b;border-radius:12px;padding:24px;margin-bottom:20px;border-left:4px solid ${i === 0 ? '#6366f1' : i === 1 ? '#8b5cf6' : i === 2 ? '#a78bfa' : '#cbd5e1'};\">\n        <div style=\"display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;\">\n          <div>\n            <span style=\"background:#6366f1;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:1px;\">#${i + 1} PICK</span>\n            <h2 style=\"color:#f1f5f9;font-size:20px;font-weight:700;margin:8px 0 4px;\">${j.title}</h2>\n            <p style=\"color:#94a3b8;font-size:14px;margin:0;\">&#127970; ${j.company} &nbsp;|&nbsp; &#128205; ${j.location} &nbsp;|&nbsp; &#128279; ${j.source}</p>\n          </div>\n          <div style=\"text-align:right;flex-shrink:0;margin-left:16px;\">\n            <div style=\"background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:8px;padding:10px 16px;\">\n              <div style=\"color:#fff;font-size:28px;font-weight:800;\">${j.relevance_score || 0}</div>\n              <div style=\"color:#c7d2fe;font-size:10px;letter-spacing:1px;\">SCORE</div>\n            </div>\n          </div>\n        </div>\n        <div style=\"background:#0f172a;border-radius:8px;padding:12px;margin:12px 0;font-family:monospace;color:#a5f3fc;font-size:12px;\">\n          ${scoreBar(j.relevance_score || 0)}\n        </div>\n        ${j.score_reason ? `<p style=\"color:#94a3b8;font-size:13px;font-style:italic;margin:8px 0;\">${j.score_reason}</p>` : ''}\n        <div style=\"display:flex;align-items:center;justify-content:space-between;margin-top:16px;\">\n          <a href=\"${j.url}\" style=\"background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;\">Apply Now &#8594;</a>\n          <a href=\"${n8nBaseUrl}/webhook/approve-job?jobId=${j.job_id}\" style=\"background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;\">&#9989; APPROVE - Get Resume</a>\n        </div>\n      </div>`).join('');\n\nconst html = `<!DOCTYPE html>\n<html>\n<head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head>\n<body style=\"margin:0;padding:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;\">\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0f172a;min-height:100vh;\">\n    <tr><td align=\"center\" style=\"padding:40px 20px;\">\n      <table width=\"640\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:640px;width:100%;\">\n        <tr><td style=\"background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#1e1b4b 100%);border-radius:16px 16px 0 0;padding:40px 32px;text-align:center;\">\n          <h1 style=\"color:#e0e7ff;font-size:32px;font-weight:800;margin:0 0 8px;\">&#129302; AI Job Intelligence</h1>\n          <p style=\"color:#a5b4fc;font-size:16px;margin:0;\">Your Daily Digest - ${today}</p>\n          <div style=\"background:rgba(255,255,255,0.1);border-radius:8px;padding:12px 24px;margin-top:20px;display:inline-block;\">\n            <span style=\"color:#c7d2fe;font-size:14px;\">&#9889; ${top5.length} top opportunities scored for you</span>\n          </div>\n        </td></tr>\n        <tr><td style=\"background:#0f172a;padding:32px;border-radius:0 0 16px 16px;\">\n          ${jobCards}\n          <div style=\"text-align:center;margin-top:32px;padding-top:24px;border-top:1px solid #1e293b;\">\n            <p style=\"color:#475569;font-size:12px;\">Generated by your n8n AI Job Intelligence System</p>\n            <p style=\"color:#22c55e;font-size:13px;font-weight:600;\">Click the green APPROVE button on any job to instantly get a tailored resume!</p>\n          </div>\n        </td></tr>\n      </table>\n    </td></tr>\n  </table>\n</body></html>`;\n\nreturn [{ json: { html_body: html, subject: `AI Job Digest - ${today} - ${top5.length} jobs scored` } }];"
-      }
+        528,
+        0
+      ]
     },
     {
-      "id": "a3000000-0000-4000-8000-000000000005",
+      "parameters": {
+        "jsCode": "\nconst d  = $input.first().json;\nconst dt = new Date().toLocaleDateString('en-US',\n  { weekday: 'long', month: 'short', day: 'numeric' });\n\n// FIX: show complete job_id (j_ + 16 hex chars = 18 chars) \u2014 user pastes it exactly\nconst card = (j, rank) =>\n  '<div style=\"margin:0 0 12px;padding:15px;background:#f8fafc;' +\n    'border-left:3px solid #0ea5e9;border-radius:5px;\">' +\n  (rank ? '<div style=\"font-size:10px;font-weight:700;color:#0ea5e9;' +\n    'text-transform:uppercase;margin-bottom:4px;\">#' + rank + ' TOP PICK</div>' : '') +\n  '<div style=\"font-weight:700;color:#0f172a;font-size:14px;\">' + j.title + '</div>' +\n  '<div style=\"color:#475569;font-size:13px;margin:3px 0;\">' +\n    j.company + ' &bull; ' + (j.location || 'India') + '</div>' +\n  '<div style=\"font-size:12px;color:#64748b;margin:6px 0;\">' +\n    'Score: <strong style=\"color:#059669;\">' + (j.relevance_score || 0) + '/100</strong>' +\n    ' &bull; ' + (j.job_type || 'full-time') + ' &bull; ' + (j.source || '') +\n    (j.job_url ? ' &bull; <a href=\"' + j.job_url + '\" style=\"color:#0ea5e9;\">Apply &rarr;</a>' : '') +\n  '</div>' +\n  '<div style=\"font-size:11px;margin-top:6px;\">' +\n    '<span style=\"background:#1e293b;color:#94a3b8;padding:3px 9px;' +\n      'border-radius:4px;font-family:monospace;\">' + j.job_id + '</span>' +\n  '</div></div>';\n\nconst example = d.top5 && d.top5[0] ? d.top5[0].job_id : 'j_xxxxxxxxxxxxxxxx';\n\nconst html =\n  '<!DOCTYPE html><html><head><meta charset=\"UTF-8\">' +\n  '<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head>' +\n  '<body style=\"font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;' +\n    'background:#f1f5f9;margin:0;padding:12px;\">' +\n  '<div style=\"max-width:600px;margin:0 auto;background:#fff;border-radius:10px;' +\n    'overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.1);\">' +\n  '<div style=\"background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff;' +\n    'padding:28px;text-align:center;\">' +\n    '<div style=\"font-size:28px;\">&#128640;</div>' +\n    '<div style=\"font-size:20px;font-weight:700;margin-top:4px;\">AI/ML Opportunities</div>' +\n    '<div style=\"font-size:13px;opacity:.8;margin-top:4px;\">' + dt + '</div>' +\n  '</div>' +\n  '<div style=\"display:flex;border-bottom:1px solid #e2e8f0;\">' +\n    '<div style=\"flex:1;padding:16px;text-align:center;border-right:1px solid #e2e8f0;\">' +\n      '<div style=\"font-size:26px;font-weight:700;color:#0f172a;\">' + d.total + '</div>' +\n      '<div style=\"font-size:10px;color:#64748b;text-transform:uppercase;\">Total</div></div>' +\n    '<div style=\"flex:1;padding:16px;text-align:center;border-right:1px solid #e2e8f0;\">' +\n      '<div style=\"font-size:26px;font-weight:700;color:#059669;\">' + d.new_today + '</div>' +\n      '<div style=\"font-size:10px;color:#64748b;text-transform:uppercase;\">New Today</div></div>' +\n    '<div style=\"flex:1;padding:16px;text-align:center;\">' +\n      '<div style=\"font-size:26px;font-weight:700;color:#0ea5e9;\">' + d.avg + '</div>' +\n      '<div style=\"font-size:10px;color:#64748b;text-transform:uppercase;\">Avg Score</div></div>' +\n  '</div>' +\n  '<div style=\"padding:20px;\">' +\n    '<div style=\"font-size:16px;font-weight:700;margin-bottom:12px;\">&#11088; Top 5</div>' +\n    (d.top5 || []).map((j, i) => card(j, i + 1)).join('') +\n  '</div>' +\n  ((d.interns || []).length ?\n    '<div style=\"padding:0 20px 20px;\">' +\n    '<div style=\"font-size:15px;font-weight:700;margin-bottom:10px;\">&#127891; Internship Spotlight</div>' +\n    d.interns.map(j => card(j, 0)).join('') + '</div>' : '') +\n  ((d.remote || []).length ?\n    '<div style=\"padding:0 20px 20px;\">' +\n    '<div style=\"font-size:15px;font-weight:700;margin-bottom:10px;\">&#127757; Remote Roles</div>' +\n    d.remote.map(j => card(j, 0)).join('') + '</div>' : '') +\n  '<div style=\"background:#0f172a;color:#e2e8f0;padding:22px;\">' +\n    '<div style=\"font-size:14px;font-weight:700;margin-bottom:8px;\">&#128233; How to Approve</div>' +\n    '<div style=\"font-size:13px;opacity:.85;line-height:1.7;\">' +\n      'Reply with the full Job ID exactly as shown above:</div>' +\n    '<div style=\"font-family:monospace;background:#1e293b;padding:10px 14px;' +\n      'border-radius:5px;margin:10px 0;font-size:13px;\">APPROVE ' + example + '</div>' +\n    '<div style=\"font-size:12px;opacity:.65;\">' +\n      'Resume + ATS report delivered within 30 min.</div>' +\n  '</div>' +\n  '<div style=\"padding:14px;text-align:center;font-size:11px;color:#94a3b8;' +\n    'border-top:1px solid #e2e8f0;\">AI Job Intelligence &bull; Groq + GitHub Actions</div>' +\n  '</div></body></html>';\n\nreturn [{ json: {\n  html, to: '[CANDIDATE_EMAIL@EXAMPLE.COM]',\n  subject: '\\u{1F680} AI/ML Digest \\u2014 ' + dt +\n    ' (' + d.total + ' roles, ' + d.new_today + ' new)'\n} }];\n"
+      },
+      "id": "42fa6216-826d-411e-b249-4fc75b05903b",
+      "name": "Generate HTML Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.GMAIL_EMAIL }}",
+        "toEmail": "[CANDIDATE_EMAIL@EXAMPLE.COM]",
+        "subject": "={{ $json.subject }}",
+        "options": {}
+      },
+      "id": "3a6424d1-48c0-44df-b022-c13c3ec9d207",
       "name": "Send Digest Email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        660,
-        200
+        1040,
+        0
       ],
-      "parameters": {
-        "fromEmail": "={{ $env.GMAIL_EMAIL }}",
-        "toEmail": "={{ $env.GMAIL_EMAIL }}",
-        "subject": "={{ $json.subject }}",
-        "emailFormat": "html",
-        "html": "={{ $json.html_body }}",
-        "options": {}
-      }
+      "webhookId": "56450bd5-61f4-44c4-80e6-23697bf0f46e"
     },
     {
-      "id": "a3000000-0000-4000-8000-000000000007",
-      "name": "Extract Job ID from Webhook",
+      "parameters": {
+        "jsCode": "\nconsole.log('=== AGENT 3a: DIGEST SENT ===', new Date().toISOString());\nreturn [{ json: { status: 'digest_sent', ts: new Date().toISOString() } }];\n"
+      },
+      "id": "772f4f86-2b18-49eb-b71d-e9760e3d1d2b",
+      "name": "Log Digest Sent",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        220,
-        700
-      ],
-      "parameters": {
-        "jsCode": "const jobId = items[0].json.query.jobId || items[0].json.body.jobId || '';\nif (!jobId || !jobId.startsWith('j_')) {\n  return [{ json: { _no_approve: true, error: 'Invalid or missing jobId' } }];\n}\nreturn [{ json: { job_id: jobId } }];"
-      }
+        1312,
+        0
+      ]
     },
     {
-      "id": "a3000000-0000-4000-8000-000000000008",
-      "name": "Check APPROVE Found",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/30 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "1b0f761d-1604-4520-af10-23d9cddd6c64",
+      "name": "Poll Every 30 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
       "position": [
-        440,
-        700
-      ],
+        0,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "customEmailConfig": "[\"UNSEEN\"]"
+        }
+      },
+      "id": "087263a3-e98d-4e05-ae11-e34949a25aac",
+      "name": "Check Gmail IMAP",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [
+        272,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\nif (!items.length) {\n  console.log('IMAP: no emails \u2014 nothing to process');\n  return [{ json: { action: 'NONE', message: 'Inbox empty' } }];\n}\nconst commands = [];\nitems.forEach(item => {\n  const rawBody = item.json.text || item.json.textHtml || item.json.html || '';\n  const body    = rawBody.replace(/<[^>]+>/g, '');\n  const subj    = item.json.subject || '';\n  const full    = subj + '\\n' + body;\n  // Match job_id format: j_ followed by exactly 16 hex characters\n  const apMatch  = full.match(/APPROVE\\s+(j_[0-9a-f]{16})/i);\n  const rejMatch = full.match(/REJECT\\s+(j_[0-9a-f]{16})/i);\n  if (apMatch)  commands.push({ action: 'APPROVE', job_id: apMatch[1].toLowerCase() });\n  if (rejMatch) commands.push({ action: 'REJECT',  job_id: rejMatch[1].toLowerCase() });\n});\nif (!commands.length) {\n  console.log('IMAP: ' + items.length + ' email(s) but no valid APPROVE/REJECT commands');\n  return [{ json: { action: 'NONE', message: 'No commands in ' + items.length + ' emails' } }];\n}\nconsole.log('Commands found: ' + commands.length);\nreturn commands.map(c => ({ json: c }));\n"
+      },
+      "id": "009964b4-1630-458d-a38e-cc81153bfe78",
+      "name": "Parse APPROVE REJECT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        368
+      ]
+    },
+    {
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": true,
+            "caseSensitive": false,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "loose"
           },
           "conditions": [
             {
-              "id": "cond-approve",
-              "leftValue": "={{ $json._no_approve }}",
-              "rightValue": true,
+              "id": "92514df5-866a-4cd5-8f9f-4cb4ef2f1701",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "APPROVE",
               "operator": {
-                "type": "boolean",
-                "operation": "notEquals"
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
               }
             }
-          ],
-          "combinator": "and"
-        }
-      }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a339d901-c79b-4a31-a7c3-a610565fbafa",
+      "name": "Has APPROVE Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        784,
+        368
+      ]
     },
     {
-      "id": "a3000000-0000-4000-8000-000000000009",
-      "name": "Fetch Resume from GitHub",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        660,
-        600
-      ],
       "parameters": {
-        "method": "GET",
-        "url": "=https://api.github.com/repos/{{ $env.GITHUB_REPO_OWNER }}/{{ $env.GITHUB_REPO_NAME }}/contents/data/resumes/{{ $json.job_id }}_resume.md?ref=state",
+        "url": "={{ 'https://api.github.com/repos/' + $env.GITHUB_REPO_OWNER + '/' + $env.GITHUB_REPO_NAME + '/contents/' + 'data/resumes/' + $json.job_id + '_resume.txt?ref=state' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+              "value": "={{ 'Bearer ' + $env.GITHUB_TOKEN }}"
             },
             {
               "name": "Accept",
@@ -182,31 +209,30 @@
         "options": {
           "response": {
             "response": {
-              "responseFormat": "json"
+              "neverError": true
             }
           }
         }
       },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "a3000000-0000-4000-8000-000000000010",
-      "name": "Fetch ATS Report from GitHub",
+      "id": "8961331a-12db-4d31-99f8-38880eeaad21",
+      "name": "Fetch Resume",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        660,
-        820
+        1040,
+        272
       ],
+      "onError": "continueRegularOutput"
+    },
+    {
       "parameters": {
-        "method": "GET",
-        "url": "=https://api.github.com/repos/{{ $env.GITHUB_REPO_OWNER }}/{{ $env.GITHUB_REPO_NAME }}/contents/data/ats_reports/{{ $json.job_id }}_ats_report.json?ref=state",
+        "url": "={{ 'https://api.github.com/repos/' + $env.GITHUB_REPO_OWNER + '/' + $env.GITHUB_REPO_NAME + '/contents/' + 'data/ats_reports/' + $json.job_id + '_ats_report.json?ref=state' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+              "value": "={{ 'Bearer ' + $env.GITHUB_TOKEN }}"
             },
             {
               "name": "Accept",
@@ -217,117 +243,151 @@
         "options": {
           "response": {
             "response": {
-              "responseFormat": "json"
+              "neverError": true
             }
           }
         }
       },
+      "id": "de850fb4-74ee-4c66-a075-f05487853c32",
+      "name": "Fetch ATS Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        464
+      ],
       "onError": "continueRegularOutput"
     },
     {
-      "id": "a3000000-0000-4000-8000-000000000011",
-      "name": "Merge Resume and ATS",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
-      "position": [
-        880,
-        700
-      ],
       "parameters": {
-        "mode": "append",
-        "numberInputs": 2
-      }
-    },
-    {
-      "id": "a3000000-0000-4000-8000-000000000012",
+        "jsCode": "\nconst all      = $input.all();\n// Identify inputs by filename in GitHub API response 'name' field\nconst resumeGH = all.find(i => i.json.name && i.json.name.endsWith('_resume.txt'));\nconst atsGH    = all.find(i => i.json.name && i.json.name.endsWith('_ats_report.json'));\n\nlet resumeText = '(Resume not found \u2014 verify Agent 2 ran today and job was in top 5)';\nlet ats = { ats_score: 65, job_title: 'the role', company: 'the company',\n  job_url: '', hiring_potential: 60, recommendation: 'good_fit',\n  strengths: [], improvements: [] };\n// FIX: extract job_id from GitHub response filename \u2014 matches exactly what Agent 2 stored\nlet jobId = 'unknown';\n\nif (resumeGH) {\n  try { resumeText = Buffer.from(resumeGH.json.content, 'base64').toString('utf-8'); }\n  catch(e) { console.log('Resume decode error:', e.message); }\n  jobId = (resumeGH.json.name || '').replace('_resume.txt', '');\n}\nif (atsGH) {\n  try { ats = JSON.parse(Buffer.from(atsGH.json.content, 'base64').toString('utf-8')); }\n  catch(e) { console.log('ATS decode error:', e.message); }\n}\n\nconst { job_title, company, job_url, ats_score, hiring_potential,\n        recommendation, strengths, improvements } = ats;\nconst scoreColor = ats_score >= 75 ? '#059669' : ats_score >= 60 ? '#d97706' : '#dc2626';\n\nconst html =\n  '<!DOCTYPE html><html><body style=\"font-family:-apple-system,BlinkMacSystemFont,' +\n    'Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;\">' +\n  '<div style=\"background:' + scoreColor + ';color:#fff;padding:24px;border-radius:8px;' +\n    'text-align:center;margin-bottom:20px;\">' +\n    '<div style=\"font-size:36px;\">&#9989;</div>' +\n    '<div style=\"font-size:20px;font-weight:700;margin-top:8px;\">Resume Ready!</div>' +\n    '<div style=\"font-size:14px;opacity:.9;margin-top:4px;\">' + job_title + ' at ' + company + '</div>' +\n  '</div>' +\n  '<div style=\"background:#f8fafc;border-radius:8px;padding:16px;margin-bottom:16px;' +\n    'display:flex;justify-content:space-around;text-align:center;\">' +\n    '<div><div style=\"font-size:30px;font-weight:700;color:#0f172a;\">' + (ats_score || 65) + '</div>' +\n      '<div style=\"font-size:10px;color:#64748b;text-transform:uppercase;\">ATS Score</div></div>' +\n    '<div><div style=\"font-size:30px;font-weight:700;color:#0ea5e9;\">' + (hiring_potential || 60) + '</div>' +\n      '<div style=\"font-size:10px;color:#64748b;text-transform:uppercase;\">Match %</div></div>' +\n    '<div style=\"padding-top:6px;\">' +\n      '<div style=\"font-size:12px;font-weight:700;color:' + scoreColor + ';\">' +\n        (recommendation || 'good_fit').replace(/_/g, ' ').toUpperCase() + '</div>' +\n      '<div style=\"font-size:10px;color:#64748b;text-transform:uppercase;\">Verdict</div></div>' +\n  '</div>' +\n  (strengths && strengths.length ?\n    '<div style=\"margin-bottom:14px;\"><strong>&#10003; Strengths</strong>' +\n    '<ul style=\"margin:6px 0;padding-left:18px;color:#374151;\">' +\n    strengths.map(s => '<li style=\"margin:3px 0;font-size:13px;\">' + s + '</li>').join('') +\n    '</ul></div>' : '') +\n  (improvements && improvements.length ?\n    '<div style=\"margin-bottom:18px;\"><strong>&#128161; Application Tips</strong>' +\n    '<ul style=\"margin:6px 0;padding-left:18px;color:#374151;\">' +\n    improvements.map(s => '<li style=\"margin:3px 0;font-size:13px;\">' + s + '</li>').join('') +\n    '</ul></div>' : '') +\n  (job_url ? '<div style=\"text-align:center;margin:20px 0;\">' +\n    '<a href=\"' + job_url + '\" style=\"background:#0ea5e9;color:#fff;padding:13px 28px;' +\n      'border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;\">Apply Now &rarr;</a>' +\n    '</div>' : '') +\n  '<div style=\"background:#f1f5f9;padding:14px;border-radius:6px;font-size:13px;color:#475569;\">' +\n    '&#128204; Resume attached as <strong>' + jobId + '_resume.txt</strong>. ' +\n    'Copy-paste into application forms for best ATS results.' +\n  '</div>' +\n  '<div style=\"text-align:center;margin-top:20px;font-size:11px;color:#94a3b8;\">' +\n    'AI Job Intelligence &bull; &#128640;' +\n  '</div></body></html>';\n\nreturn [{ json: {\n  html, resumeText, job_id: jobId, job_title, company,\n  ats_score: ats_score || 65,\n  subject: '\\u2705 Resume Ready \\u2014 ' + job_title +\n    ' @ ' + company + ' (ATS: ' + (ats_score || 65) + '/100)',\n  filename: jobId + '_approval.json'\n} }];\n"
+      },
+      "id": "92a20151-5258-41e0-885d-e1e14108c186",
       "name": "Build Approval Email",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1100,
-        700
-      ],
-      "parameters": {
-        "jsCode": "const allItems = items;\n\nlet resumeItem = null;\nlet atsItem = null;\n\nfor (const i of allItems) {\n  if (i.json.name && String(i.json.name).endsWith('_resume.md')) {\n    resumeItem = i.json;\n  } else if (i.json.name && String(i.json.name).endsWith('_ats_report.json')) {\n    atsItem = i.json;\n  }\n}\n\nif (!resumeItem && !atsItem) {\n  resumeItem = allItems[0] ? allItems[0].json : null;\n  atsItem = allItems[1] ? allItems[1].json : null;\n}\n\nlet resumeText = '';\nlet atsData = {};\nlet jobId = 'unknown';\n\nif (resumeItem && resumeItem.content) {\n  resumeText = Buffer.from(resumeItem.content, 'base64').toString('utf8');\n  jobId = (resumeItem.name || '').replace('_resume.md', '');\n}\n\nif (atsItem && atsItem.content) {\n  try {\n    atsData = JSON.parse(Buffer.from(atsItem.content, 'base64').toString('utf8'));\n  } catch (e) {\n    atsData = {};\n  }\n}\n\nconst resume_b64 = Buffer.from(resumeText).toString('base64');\nconst atsJson = JSON.stringify(atsData, null, 2);\n\nconst scoreColor = (s) => s >= 80 ? '#22c55e' : s >= 60 ? '#eab308' : '#ef4444';\nconst score = atsData.overall_score || 0;\n\nconst html = `<!DOCTYPE html>\n<html>\n<head><meta charset=\"UTF-8\"></head>\n<body style=\"margin:0;padding:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;\">\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0f172a;\">\n    <tr><td align=\"center\" style=\"padding:40px 20px;\">\n      <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;\">\n        <tr><td style=\"background:linear-gradient(135deg,#064e3b,#065f46);border-radius:16px 16px 0 0;padding:32px;text-align:center;\">\n          <h1 style=\"color:#ecfdf5;font-size:28px;font-weight:800;margin:0 0 8px;\">Resume Ready!</h1>\n          <p style=\"color:#a7f3d0;font-size:14px;margin:0;\">Your tailored resume for <strong>${jobId}</strong></p>\n        </td></tr>\n        <tr><td style=\"background:#1e293b;padding:32px;border-radius:0 0 16px 16px;\">\n          <div style=\"background:#0f172a;border-radius:12px;padding:24px;margin-bottom:20px;text-align:center;\">\n            <div style=\"font-size:48px;font-weight:800;color:${scoreColor(score)};\">${score}</div>\n            <div style=\"color:#94a3b8;font-size:14px;\">ATS Score / 100</div>\n          </div>\n          ${atsData.matched_keywords ? `<div style=\"background:#0f172a;border-radius:8px;padding:16px;margin-bottom:16px;\"><p style=\"color:#a5f3fc;font-size:12px;font-weight:700;margin:0 0 8px;\">MATCHED KEYWORDS</p><p style=\"color:#cbd5e1;font-size:12px;margin:0;\">${atsData.matched_keywords.join(', ')}</p></div>` : ''}\n          ${atsData.missing_keywords ? `<div style=\"background:#0f172a;border-radius:8px;padding:16px;margin-bottom:16px;\"><p style=\"color:#fca5a5;font-size:12px;font-weight:700;margin:0 0 8px;\">MISSING KEYWORDS</p><p style=\"color:#cbd5e1;font-size:12px;margin:0;\">${atsData.missing_keywords.join(', ')}</p></div>` : ''}\n          <p style=\"color:#94a3b8;font-size:13px;margin:16px 0 0;\">Your tailored resume is attached to this email.</p>\n        </td></tr>\n      </table>\n    </td></tr>\n  </table>\n</body></html>`;\n\nreturn [{\n  json: {\n    job_id: jobId,\n    html_body: html,\n    subject: `Your Resume for ${jobId} - ATS Score: ${score}/100`,\n    ats_score: score\n  },\n  binary: {\n    resume: {\n      data: resume_b64,\n      mimeType: 'text/markdown',\n      fileName: `${jobId}_resume.md`\n    }\n  }\n}];"
-      }
+        1312,
+        368
+      ]
     },
     {
-      "id": "a3000000-0000-4000-8000-000000000013",
+      "parameters": {
+        "fromEmail": "={{ $env.GMAIL_EMAIL }}",
+        "toEmail": "[CANDIDATE_EMAIL@EXAMPLE.COM]",
+        "subject": "={{ $json.subject }}",
+        "options": {}
+      },
+      "id": "f9c714f0-5144-4a93-8f33-28cbd5c2b7bd",
       "name": "Send Approval Email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        1320,
-        700
+        1568,
+        368
       ],
-      "parameters": {
-        "fromEmail": "={{ $env.GMAIL_EMAIL }}",
-        "toEmail": "={{ $env.GMAIL_EMAIL }}",
-        "subject": "={{ $json.subject }}",
-        "emailFormat": "html",
-        "html": "={{ $json.html_body }}",
-        "options": {
-          "attachments": "resume"
-        }
-      }
+      "webhookId": "f6b3e2ff-db0b-403f-ab7b-97ead582b551"
     },
     {
-      "id": "a3000000-0000-4000-8000-000000000015",
-      "name": "Respond to Webhook",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        1540,
-        700
-      ],
       "parameters": {
-        "respondWith": "text",
-        "responseBody": "=Resume request received for {{ $json.job_id }}! Check your email shortly for the tailored resume with ATS score.",
+        "jsCode": "\nconst d = $input.first().json;\nconst record = { job_id: d.job_id, status: 'approved',\n  ats_score: d.ats_score, job_title: d.job_title,\n  company: d.company, ts: new Date().toISOString() };\nreturn [{ json: {\n  github_payload: {\n    message: 'auto: approved ' + d.job_id,\n    content: Buffer.from(JSON.stringify(record, null, 2)).toString('base64'),\n    branch: 'state'\n    // No sha \u2014 new file per approval, no SHA conflict possible\n  },\n  filename: d.filename,\n  job_id:   d.job_id\n} }];\n"
+      },
+      "id": "46e3b4e4-2fa2-4168-aee8-3e8de1f75ee1",
+      "name": "Build Approval Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ 'https://api.github.com/repos/' + $env.GITHUB_REPO_OWNER + '/' + $env.GITHUB_REPO_NAME + '/contents/' + 'data/approvals/' + $json.filename }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
         "options": {}
-      }
+      },
+      "id": "b24ca115-56db-49d4-8de8-6d012e70c192",
+      "name": "Write Approval File",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2080,
+        368
+      ]
     },
     {
-      "id": "a3000000-0000-4000-8000-000000000014",
-      "name": "Respond Error",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        660,
-        900
-      ],
       "parameters": {
-        "respondWith": "text",
-        "responseBody": "Error: Invalid or missing job ID. Use format: ?jobId=j_xxxxxxxxxxxxxxxx",
-        "options": {
-          "responseCode": 400
-        }
-      }
+        "jsCode": "\nconst d = $input.first().json;\nconsole.log('=== AGENT 3b: APPROVAL COMPLETE ===');\nconsole.log('Job ID: ' + d.job_id);\nconsole.log('Status file: data/approvals/' + d.job_id + '_approval.json');\nreturn [{ json: { status: 'approved', job_id: d.job_id, ts: new Date().toISOString() } }];\n"
+      },
+      "id": "b3cabdff-49aa-4a29-9af5-6c7aeac0b987",
+      "name": "Log Approval",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2352,
+        368
+      ]
     }
   ],
   "connections": {
-    "Digest Trigger 8 AM IST": {
+    "Schedule 8:00 AM IST": {
       "main": [
         [
           {
-            "node": "Fetch Jobs for Digest",
+            "node": "Load Jobs for Digest",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Jobs for Digest": {
+    "Load Jobs for Digest": {
       "main": [
         [
           {
-            "node": "Build Digest Email",
+            "node": "Build Digest Data",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Build Digest Email": {
+    "Build Digest Data": {
+      "main": [
+        [
+          {
+            "node": "Generate HTML Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate HTML Email": {
       "main": [
         [
           {
@@ -338,74 +398,56 @@
         ]
       ]
     },
-    "Webhook Approve": {
+    "Send Digest Email": {
       "main": [
         [
           {
-            "node": "Extract Job ID from Webhook",
+            "node": "Log Digest Sent",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract Job ID from Webhook": {
+    "Check Gmail IMAP": {
       "main": [
         [
           {
-            "node": "Check APPROVE Found",
+            "node": "Parse APPROVE REJECT",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check APPROVE Found": {
+    "Parse APPROVE REJECT": {
       "main": [
         [
           {
-            "node": "Fetch Resume from GitHub",
+            "node": "Has APPROVE Command?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has APPROVE Command?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Resume",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Fetch ATS Report from GitHub",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Respond Error",
+            "node": "Fetch ATS Report",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Resume from GitHub": {
-      "main": [
-        [
-          {
-            "node": "Merge Resume and ATS",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fetch ATS Report from GitHub": {
-      "main": [
-        [
-          {
-            "node": "Merge Resume and ATS",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Merge Resume and ATS": {
+    "Fetch Resume": {
       "main": [
         [
           {
@@ -431,12 +473,42 @@
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "Build Approval Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Approval Status": {
+      "main": [
+        [
+          {
+            "node": "Write Approval File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Approval File": {
+      "main": [
+        [
+          {
+            "node": "Log Approval",
             "type": "main",
             "index": 0
           }
         ]
       ]
     }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
   }
 }

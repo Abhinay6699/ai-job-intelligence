@@ -1,21 +1,7 @@
 {
-  "id": "agent1jobscraper",
-  "name": "Agent 1 - Job Scraper & Scorer",
-  "active": false,
-  "settings": {
-    "executionOrder": "v1",
-    "timezone": "Asia/Kolkata"
-  },
+  "name": "Agent 1 \u2014 Daily Job Intelligence",
   "nodes": [
     {
-      "id": "a1000000-0000-4000-8000-000000000001",
-      "name": "Every Morning 7 AM IST",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        0,
-        300
-      ],
       "parameters": {
         "rule": {
           "interval": [
@@ -25,173 +11,161 @@
             }
           ]
         }
-      }
-    },
-    {
-      "id": "a1000000-0000-4000-8000-000000000002",
-      "name": "Fetch Internshala AI",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        220,
-        100
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "https://internshala.com/internships/artificial-intelligence-internship/",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "text"
-            }
-          }
-        }
       },
-      "onError": "continueRegularOutput"
+      "id": "fb25c820-1a95-432b-8710-ef73c02f3fa0",
+      "name": "Schedule 7:00 AM IST",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        256,
+        32
+      ]
     },
     {
-      "id": "a1000000-0000-4000-8000-000000000003",
-      "name": "Parse Internshala AI",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        440,
-        100
-      ],
       "parameters": {
-        "jsCode": "const crypto = require('crypto');\nfunction makeId(title, company) {\n  return 'j_' + crypto.createHash('sha256')\n    .update((title + company).toLowerCase()).digest('hex').slice(0, 16);\n}\n\nconst html = items[0].json.data || items[0].json.body || '';\nconst results = [];\nconst regex = /<div[^>]+class=\"[^\"]*individual_internship[^\"]*\"[^>]*>(.*?)<\\/div>\\s*<\\/div>/gis;\nconst titleRe = /class=\"[^\"]*profile[^\"]*\"[^>]*>([^<]+)<\\/a>/i;\nconst companyRe = /class=\"[^\"]*company_name[^\"]*\"[^>]*>\\s*<[^>]+>\\s*([^<]+)/i;\nconst locRe = /class=\"[^\"]*location[^\"]*\"[^>]*>([^<]+)<\\/span>/i;\nconst linkRe = /href=\"(\\/internship\\/detail\\/[^\"]+)\"/i;\n\nlet match;\nwhile ((match = regex.exec(html)) !== null) {\n  const block = match[1];\n  const titleMatch = titleRe.exec(block);\n  const companyMatch = companyRe.exec(block);\n  const locMatch = locRe.exec(block);\n  const linkMatch = linkRe.exec(block);\n  if (titleMatch && companyMatch) {\n    const title = titleMatch[1].trim();\n    const company = companyMatch[1].trim();\n    results.push({\n      job_id: makeId(title, company),\n      title,\n      company,\n      location: locMatch ? locMatch[1].trim() : 'India',\n      url: linkMatch ? 'https://internshala.com' + linkMatch[1] : 'https://internshala.com',\n      source: 'Internshala_AI',\n      scraped_at: new Date().toISOString()\n    });\n  }\n}\n\nif (results.length === 0) {\n  results.push({\n    job_id: makeId('ai-intern-placeholder', 'internshala'),\n    title: 'AI Intern (scraped)',\n    company: 'Internshala',\n    location: 'India',\n    url: 'https://internshala.com/internships/artificial-intelligence-internship/',\n    source: 'Internshala_AI',\n    scraped_at: new Date().toISOString()\n  });\n}\n\nreturn results.map(j => ({ json: j }));"
-      }
-    },
-    {
-      "id": "a1000000-0000-4000-8000-000000000004",
-      "name": "Fetch Internshala ML",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        220,
-        220
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "https://internshala.com/internships/machine-learning-internship/",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "text"
-            }
-          }
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "a1000000-0000-4000-8000-000000000005",
-      "name": "Parse Internshala ML",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        440,
-        220
-      ],
-      "parameters": {
-        "jsCode": "const crypto = require('crypto');\nfunction makeId(title, company) {\n  return 'j_' + crypto.createHash('sha256')\n    .update((title + company).toLowerCase()).digest('hex').slice(0, 16);\n}\n\nconst html = items[0].json.data || items[0].json.body || '';\nconst results = [];\nconst regex = /<div[^>]+class=\"[^\"]*individual_internship[^\"]*\"[^>]*>(.*?)<\\/div>\\s*<\\/div>/gis;\nconst titleRe = /class=\"[^\"]*profile[^\"]*\"[^>]*>([^<]+)<\\/a>/i;\nconst companyRe = /class=\"[^\"]*company_name[^\"]*\"[^>]*>\\s*<[^>]+>\\s*([^<]+)/i;\nconst locRe = /class=\"[^\"]*location[^\"]*\"[^>]*>([^<]+)<\\/span>/i;\nconst linkRe = /href=\"(\\/internship\\/detail\\/[^\"]+)\"/i;\n\nlet match;\nwhile ((match = regex.exec(html)) !== null) {\n  const block = match[1];\n  const titleMatch = titleRe.exec(block);\n  const companyMatch = companyRe.exec(block);\n  const locMatch = locRe.exec(block);\n  const linkMatch = linkRe.exec(block);\n  if (titleMatch && companyMatch) {\n    const title = titleMatch[1].trim();\n    const company = companyMatch[1].trim();\n    results.push({\n      job_id: makeId(title, company),\n      title,\n      company,\n      location: locMatch ? locMatch[1].trim() : 'India',\n      url: linkMatch ? 'https://internshala.com' + linkMatch[1] : 'https://internshala.com',\n      source: 'Internshala_ML',\n      scraped_at: new Date().toISOString()\n    });\n  }\n}\n\nif (results.length === 0) {\n  results.push({\n    job_id: makeId('ml-intern-placeholder', 'internshala'),\n    title: 'ML Intern (scraped)',\n    company: 'Internshala',\n    location: 'India',\n    url: 'https://internshala.com/internships/machine-learning-internship/',\n    source: 'Internshala_ML',\n    scraped_at: new Date().toISOString()\n  });\n}\n\nreturn results.map(j => ({ json: j }));"
-      }
-    },
-    {
-      "id": "a1000000-0000-4000-8000-000000000006",
-      "name": "Fetch RemoteOK",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        220,
-        340
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "https://remoteok.com/api?tag=machine-learning",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
-        },
-        "headers": {
+        "url": "https://internshala.com/internships/artificial-intelligence/",
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
             {
               "name": "User-Agent",
-              "value": "Mozilla/5.0 (compatible; JobBot/1.0)"
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml"
             }
           ]
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "a1000000-0000-4000-8000-000000000007",
-      "name": "Parse RemoteOK",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        440,
-        340
-      ],
-      "parameters": {
-        "jsCode": "const crypto = require('crypto');\nfunction makeId(title, company) {\n  return 'j_' + crypto.createHash('sha256')\n    .update((title + company).toLowerCase()).digest('hex').slice(0, 16);\n}\n\nconst raw = items[0].json;\nconst list = Array.isArray(raw) ? raw : [];\nconst results = [];\n\nfor (const job of list) {\n  if (!job || !job.position) continue;\n  const title = (job.position || '').trim();\n  const company = (job.company || 'Unknown').trim();\n  if (!title) continue;\n  results.push({\n    job_id: makeId(title, company),\n    title,\n    company,\n    location: job.location || 'Remote',\n    url: job.url || ('https://remoteok.com/jobs/' + (job.id || '')),\n    source: 'RemoteOK',\n    description: (job.description || '').slice(0, 500),\n    scraped_at: new Date().toISOString()\n  });\n}\n\nif (results.length === 0) {\n  return [{ json: { _sentinel: true, source: 'RemoteOK' } }];\n}\n\nreturn results.map(j => ({ json: j }));"
-      }
-    },
-    {
-      "id": "a1000000-0000-4000-8000-000000000008",
-      "name": "Fetch HN Jobs",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        220,
-        460
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "https://hacker-news.firebaseio.com/v0/jobstories.json",
+        },
         "options": {
           "response": {
             "response": {
-              "responseFormat": "json"
+              "neverError": true
             }
-          }
+          },
+          "timeout": 15000
         }
       },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "a1000000-0000-4000-8000-000000000009",
-      "name": "Parse HN Jobs",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        440,
-        460
-      ],
-      "parameters": {
-        "jsCode": "const crypto = require('crypto');\nfunction makeId(title, company) {\n  return 'j_' + crypto.createHash('sha256')\n    .update((title + company).toLowerCase()).digest('hex').slice(0, 16);\n}\n\nconst ids = items[0].json;\nconst slice = Array.isArray(ids) ? ids.slice(0, 20) : [];\nconst results = [];\n\nfor (const id of slice) {\n  try {\n    const resp = await this.helpers.httpRequest({\n      method: 'GET',\n      url: `https://hacker-news.firebaseio.com/v0/item/${id}.json`\n    });\n    if (!resp || resp.type !== 'job') continue;\n    const rawTitle = resp.title || '';\n    const lower = rawTitle.toLowerCase();\n    if (!lower.includes('ml') && !lower.includes('machine learning') &&\n        !lower.includes('ai') && !lower.includes('artificial intelligence') &&\n        !lower.includes('deep learning') && !lower.includes('nlp') &&\n        !lower.includes('data science')) continue;\n    const urlMatch = rawTitle.match(/\\(([^)]+)\\)$/);\n    const company = urlMatch ? urlMatch[1] : 'HackerNews Job';\n    const title = rawTitle.replace(/\\s*\\([^)]*\\)\\s*$/, '').trim();\n    results.push({\n      job_id: makeId(title, company),\n      title,\n      company,\n      location: 'Remote/Various',\n      url: resp.url || `https://news.ycombinator.com/item?id=${id}`,\n      source: 'HackerNews',\n      description: (resp.text || '').replace(/<[^>]*>/g, '').slice(0, 500),\n      scraped_at: new Date().toISOString()\n    });\n  } catch (e) { /* skip */ }\n}\n\nif (results.length === 0) {\n  return [{ json: { _sentinel: true, source: 'HackerNews' } }];\n}\n\nreturn results.map(j => ({ json: j }));"
-      }
-    },
-    {
-      "id": "a1000000-0000-4000-8000-000000000010",
-      "name": "Load Existing Jobs",
+      "id": "dd6edd7f-4946-4abf-b7a2-cde3997fd766",
+      "name": "Scrape Internshala AI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        220,
-        580
-      ],
+        512,
+        -208
+      ]
+    },
+    {
       "parameters": {
-        "method": "GET",
-        "url": "=https://api.github.com/repos/{{ $env.GITHUB_REPO_OWNER }}/{{ $env.GITHUB_REPO_NAME }}/contents/data/jobs.json?ref=state",
-        "headers": {
+        "url": "https://internshala.com/internships/machine-learning/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "1b6b4827-0752-4ca2-b563-6f08ca60f4e9",
+      "name": "Scrape Internshala ML",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        512,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://remoteok.io/remote-jobs?tag=machine-learning",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "ed1eb349-b75b-47d9-a7b6-7936e936950f",
+      "name": "Scrape RemoteOK",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        512,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.ycombinator.com/jobs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "e01880e9-ea9a-4c97-8547-7e4252ba190a",
+      "name": "Scrape HN Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        512,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/[GITHUB_USERNAME]/ai-job-intelligence/contents/data/jobs.json?ref=state",
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+              "value": "Bearer <GITHUB_TOKEN_REDACTED>"
             },
             {
               "name": "Accept",
@@ -202,145 +176,140 @@
         "options": {
           "response": {
             "response": {
-              "responseFormat": "json"
-            }
-          },
-          "redirect": {
-            "redirect": {
-              "followRedirects": true
+              "neverError": true
             }
           }
         }
-      }
-    },
-    {
-      "id": "a1000000-0000-4000-8000-000000000011",
-      "name": "Merge All Sources",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
+      },
+      "id": "ed8a2a37-322d-49af-b450-cfbcd4c2e7b9",
+      "name": "Load Existing Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        700,
-        340
-      ],
-      "parameters": {
-        "mode": "append",
-        "numberInputs": 5
-      }
+        512,
+        368
+      ]
     },
     {
-      "id": "a1000000-0000-4000-8000-000000000012",
+      "parameters": {
+        "jsCode": "function makeId(title, company) {\n  return 'j_' +\n    (\n      title.toLowerCase().replace(/[^a-z0-9]/g, '') +\n      company.toLowerCase().replace(/[^a-z0-9]/g, '')\n    ).slice(0, 16);\n}\n\nconst body =\n  $input.first().json.data ||\n  $input.first().json.body ||\n  '';\n\nconst now = new Date().toISOString();\n\nconst jobs = [];\n\nconst hrefs = [...body.matchAll(\n  /<a class=\"job-title-href\"[^>]*href=\"([^\"]+)\"[^>]*>(.*?)<\\/a>/gi\n)];\n\nfor (const m of hrefs) {\n\n  const href = m[1];\n  const title = m[2].replace(/<[^>]+>/g, '').trim();\n\n  const start = Math.max(0, m.index - 500);\n  const end = Math.min(body.length, m.index + 5000);\n\n  const chunk = body.slice(start, end);\n\n  const company =\n    chunk.match(/<p class=\"company-name\">\\s*([^<]+)\\s*</i)?.[1]?.trim() ||\n    'Unknown';\n\n  const location =\n    chunk.match(/row-1-item locations[\\s\\S]*?<a[^>]*>([^<]+)<\\/a>/i)?.[1]?.trim() ||\n    'India';\n\n  const stipend =\n    chunk.match(/class=['\"]stipend['\"][^>]*>([^<]+)</i)?.[1]?.trim() ||\n    null;\n\n  const id = makeId(title, company);\n\n  jobs.push({\n    job_id: id,\n    source: 'internshala',\n    title,\n    company,\n    location,\n    stipend,\n    job_url: 'https://internshala.com' + href,\n    job_type: 'internship',\n    hash: id.slice(2),\n    date_found: now,\n    date_scraped: now,\n    date_posted: now,\n    description_text: '',\n    skills_required: [],\n    relevance_score: 0,\n    status: 'new',\n    tags: []\n  });\n}\n\nreturn jobs.length\n  ? jobs.map(j => ({ json: j }))\n  : [{ json: { _sentinel: true, source: 'internshala' } }];"
+      },
+      "id": "5c7a41e7-dcec-4280-b7f5-822c6b41efb9",
+      "name": "Parse Internshala AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function makeId(title, company) {\n  return 'j_' +\n    (\n      title.toLowerCase().replace(/[^a-z0-9]/g, '') +\n      company.toLowerCase().replace(/[^a-z0-9]/g, '')\n    ).slice(0, 16);\n}\n\nconst now = new Date().toISOString();\nconst body = $input.first().json.body || '';\n\nif (body.length < 100) {\n  return [{ json: { _sentinel: true, source: 'remoteok' } }];\n}\n\nconst jobs = [];\n\nconst jobRegex = /<tr[^>]*class=\"[^\"]*job[^\"]*\"[^>]*data-slug=\"([^\"]+)\"[^>]*>([\\s\\S]*?)<\\/tr>/gi;\n\nlet match;\n\nwhile ((match = jobRegex.exec(body)) !== null) {\n  const slug = match[1];\n  const block = match[2];\n\n  const title =\n    (block.match(/itemprop=\"title\"[^>]*>([^<]+)/i)?.[1] || '').trim();\n\n  const company =\n    (block.match(/itemprop=\"name\"[^>]*>([^<]+)/i)?.[1] || '').trim();\n\n  if (!title || !company) continue;\n\n  const tags = [];\n  const tagMatches = block.matchAll(/class=\"[^\"]*tag[^\"]*\"[^>]*>([^<]+)/gi);\n\n  for (const t of tagMatches) {\n    tags.push(t[1].trim());\n  }\n\n  const id = makeId(title, company);\n\n  jobs.push({\n    job_id: id,\n    source: 'remoteok',\n    title,\n    company,\n    location: 'Remote',\n    job_url: slug ? `https://remoteok.io/${slug}` : null,\n    job_type: 'remote',\n    hash: id.slice(2),\n    date_found: now,\n    date_scraped: now,\n    date_posted: now,\n    description_text: '',\n    skills_required: tags,\n    relevance_score: 0,\n    status: 'new',\n    tags: []\n  });\n}\n\nif (!jobs.length) {\n  return [{ json: { _sentinel: true, source: 'remoteok' } }];\n}\n\nreturn jobs.map(j => ({ json: j }));"
+      },
+      "id": "7298110b-643a-4548-a045-61ed9b885d60",
+      "name": "Parse RemoteOK",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function makeId(title, company) {\n  return 'j_' +\n    (\n      title.toLowerCase().replace(/[^a-z0-9]/g, '') +\n      company.toLowerCase().replace(/[^a-z0-9]/g, '')\n    ).slice(0, 16);\n}\n\nconst now = new Date().toISOString();\nconst body = $input.first().json.body || '';\n\nif (body.length < 100) {\n  return [{ json: { _sentinel: true, source: 'hn_jobs' } }];\n}\n\nconst AI_RE = /\\b(ai|ml|machine[\\s-]?learning|nlp|llm|large language|deep learning|data sci|neural|computer vision|generative)\\b/i;\n\nconst jobs = [];\n\nconst linkRegex = /<a[^>]*href=\"([^\"]+)\"[^>]*>(.*?)<\\/a>/gi;\n\nlet match;\n\nwhile ((match = linkRegex.exec(body)) !== null) {\n  const href = match[1];\n  const rawTitle = match[2].replace(/<[^>]+>/g, '').trim();\n\n  if (!rawTitle) continue;\n  if (!AI_RE.test(rawTitle)) continue;\n\n  const parts = rawTitle.split(/\\s*[\\|\\u2013\\u2014]\\s*/);\n\n  const company =\n    parts.length > 1\n      ? parts[parts.length - 1].trim()\n      : 'HN Listing';\n\n  const cleanTitle = parts[0].trim();\n\n  const id = makeId(cleanTitle, company);\n\n  jobs.push({\n    job_id: id,\n    source: 'hn_jobs',\n    title: cleanTitle,\n    company,\n    location: 'Remote',\n    job_url: href.startsWith('http') ? href : null,\n    job_type: 'full-time',\n    hash: id.slice(2),\n    date_found: now,\n    date_scraped: now,\n    date_posted: now,\n    description_text: '',\n    skills_required: [],\n    relevance_score: 0,\n    status: 'new',\n    tags: []\n  });\n}\n\nif (!jobs.length) {\n  return [{ json: { _sentinel: true, source: 'hn_jobs' } }];\n}\n\nreturn jobs.map(j => ({ json: j }));"
+      },
+      "id": "febd6182-3215-42d5-b0d1-9257a815c2a4",
+      "name": "Parse HN Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const all = $input.all();\n\nconst ghItem = all.find(\n  i => i.json.sha !== undefined &&\n       i.json.content !== undefined\n);\n\nconst jobItems = all.filter(\n  i => i.json.source !== undefined &&\n       !i.json._sentinel\n);\n\nlet existing = [];\nlet sha = null;\n\nif (ghItem) {\n  try {\n    const db = JSON.parse(\n      Buffer.from(\n        ghItem.json.content,\n        'base64'\n      ).toString('utf8')\n    );\n\n    existing = db.jobs || [];\n    sha = ghItem.json.sha || null;\n  } catch {}\n}\n\nconst seen = new Set(\n  existing.map(j => j.hash)\n);\n\nconst fresh = jobItems\n  .map(i => i.json)\n  .filter(j => j.hash && !seen.has(j.hash));\n\nreturn [{\n  json: {\n    fresh_jobs: fresh,\n    existing,\n    sha,\n    fresh_count: fresh.length\n  }\n}];"
+      },
+      "id": "cf8def4a-003c-4352-bdb8-b25a86773ba9",
       "name": "Deduplicate Jobs",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        920,
-        340
-      ],
-      "parameters": {
-        "jsCode": "// Separate github state item from real job items by field presence\nconst allItems = items;\n\nlet githubItem = null;\nlet newJobs = [];\n\nfor (const i of allItems) {\n  if (i.json.sha !== undefined && i.json.content !== undefined) {\n    githubItem = i.json;\n  } else if (i.json.source !== undefined && !i.json._sentinel) {\n    newJobs.push(i.json);\n  }\n}\n\n// Parse existing jobs from GitHub base64 content\nlet existingJobs = [];\nlet fileSha = null;\n\nif (githubItem) {\n  fileSha = githubItem.sha;\n  try {\n    const decoded = Buffer.from(githubItem.content, 'base64').toString('utf8');\n    existingJobs = JSON.parse(decoded);\n    if (!Array.isArray(existingJobs)) existingJobs = [];\n  } catch (e) {\n    existingJobs = [];\n  }\n}\n\nconst existingIds = new Set(existingJobs.map(j => j.job_id));\n\nconst freshJobs = newJobs.filter(j => j.job_id && !existingIds.has(j.job_id));\n\nreturn [{\n  json: {\n    fresh_jobs: freshJobs,\n    existing_jobs: existingJobs,\n    file_sha: fileSha,\n    fresh_count: freshJobs.length\n  }\n}];"
-      }
+        1296,
+        144
+      ]
     },
     {
-      "id": "a1000000-0000-4000-8000-000000000013",
-      "name": "Check Fresh Jobs Exist",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        1140,
-        340
-      ],
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "cond-fresh",
-              "leftValue": "={{ $json.fresh_count }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "gt"
-              }
-            }
-          ],
-          "combinator": "and"
-        }
-      }
-    },
-    {
-      "id": "a1000000-0000-4000-8000-000000000014",
+        "jsCode": "\nconst d    = $input.first().json;\nconst jobs = (d.fresh_jobs || []).slice(0, 20);\nconst listing = jobs.map((j, i) =>\n  (i + 1) + '. hash:' + j.hash + ' | \"' + j.title + '\" at ' + j.company +\n  ' | ' + j.location + ' | ' + j.job_type\n).join('\\n');\n\nreturn [{ json: {\n  groq_request: {\n    model: 'openai/gpt-oss-120b',\n    temperature: 0.2, max_tokens: 700,\n    messages: [\n      { role: 'system',\n        content: 'Score each job 0-100 for a B.Tech AI/ML grad with PyTorch, TensorFlow, NLP, Transformers, LLMs. Return ONLY a JSON array, no other text: [{\"hash\":\"16_char_hash\",\"score\":number}]' },\n      { role: 'user', content: 'Score these jobs:\\n' + listing }\n    ]\n  },\n  fresh_jobs: d.fresh_jobs,\n  existing:   d.existing,\n  sha:        d.sha\n} }];\n"
+      },
+      "id": "8021a0df-7806-4d4d-b573-ae92ddd86d83",
       "name": "Build Groq Score Req",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1360,
-        240
-      ],
-      "parameters": {
-        "jsCode": "const data = items[0].json;\nconst freshJobs = data.fresh_jobs;\nconst existingJobs = data.existing_jobs;\nconst fileSha = data.file_sha;\n\nconst jobList = freshJobs.map((j, i) => `[${i}] ${j.title} at ${j.company} (${j.source})`).join('\\n');\n\nconst prompt = `You are an AI job relevance scorer for a candidate with this profile:\n- B.Tech AI & Machine Learning student (CGPA 8.35, graduating Sep 2026)\n- Projects: GPT-style transformer (EMERALD), Fake News Detection, AI Crop Prediction, Binance Trading Bot\n- Skills: Python, PyTorch, TensorFlow, Scikit-learn, Flask, FastAPI, NLTK, SpaCy, Pandas, NumPy, Flutter\n- Certifications: NPTEL Elite \u2014 Introduction to Large Language Models\n\nScore each job below from 0-100 for relevance to this candidate. Return ONLY a JSON array of objects with fields: index (integer), score (integer 0-100), reason (one sentence).\n\nJobs to score:\n${jobList}\n\nReturn only the JSON array, no other text.`;\n\nreturn [{\n  json: {\n    fresh_jobs: freshJobs,\n    existing_jobs: existingJobs,\n    file_sha: fileSha,\n    groq_request: {\n      model: 'openai/gpt-oss-120b',\n      messages: [\n        { role: 'system', content: 'You are a precise job relevance scorer. Return only valid JSON.' },\n        { role: 'user', content: prompt }\n      ],\n      temperature: 0.2,\n      max_tokens: 2048\n    }\n  }\n}];"
-      }
+        1552,
+        144
+      ]
     },
     {
-      "id": "a1000000-0000-4000-8000-000000000015",
-      "name": "Groq Score Jobs",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1580,
-        240
-      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.groq.com/openai/v1/chat/completions",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
-        "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json.groq_request }}",
         "options": {
           "response": {
             "response": {
+              "neverError": true,
               "responseFormat": "json"
             }
-          }
+          },
+          "timeout": 30000
         }
-      }
-    },
-    {
-      "id": "a1000000-0000-4000-8000-000000000016",
-      "name": "Apply Scores",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1800,
-        240
-      ],
-      "parameters": {
-        "jsCode": "const groqResp = items[0].json;\nconst originalData = $('Build Groq Score Req').first().json;\n\nconst freshJobs = originalData.fresh_jobs;\nconst existingJobs = originalData.existing_jobs;\nconst fileSha = originalData.file_sha;\n\nlet scores = [];\ntry {\n  const content = groqResp.choices[0].message.content;\n  const jsonMatch = content.match(/\\[.*\\]/s);\n  scores = jsonMatch ? JSON.parse(jsonMatch[0]) : [];\n} catch (e) {\n  scores = [];\n}\n\nconst scoreMap = {};\nfor (const s of scores) {\n  if (s.index !== undefined) {\n    scoreMap[s.index] = { score: s.score || 0, reason: s.reason || '' };\n  }\n}\n\nconst scoredFresh = freshJobs.map((j, i) => ({\n  ...j,\n  relevance_score: scoreMap[i] ? scoreMap[i].score : 0,\n  score_reason: scoreMap[i] ? scoreMap[i].reason : 'Not scored',\n  scored_at: new Date().toISOString()\n}));\n\nconst allJobs = [...existingJobs, ...scoredFresh];\nallJobs.sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));\n\nconst content = JSON.stringify(allJobs, null, 2);\nconst contentB64 = Buffer.from(content).toString('base64');\n\nconst payload = {\n  message: `Update jobs.json \u2014 ${scoredFresh.length} new jobs added on ${new Date().toISOString()}`,\n  content: contentB64,\n  branch: 'state'\n};\n\nif (fileSha) {\n  payload.sha = fileSha;\n}\n\nreturn [{\n  json: {\n    github_payload: payload,\n    job_count: allJobs.length,\n    new_count: scoredFresh.length\n  }\n}];"
-      }
-    },
-    {
-      "id": "a1000000-0000-4000-8000-000000000017",
-      "name": "Commit Jobs to GitHub",
+      },
+      "id": "62631f41-1bb3-4fef-aa1c-7892be0c6e5c",
+      "name": "Groq Score Jobs",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2020,
-        240
-      ],
+        1824,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const all = $input.all();\n\nconst groqItem = all.find(i => i.json.choices !== undefined);\n\n// Get original data directly from Build Groq Score Req\nconst data = $('Build Groq Score Req').first().json;\n\nconst fresh = data.fresh_jobs || [];\nconst existing = data.existing || [];\nconst sha = data.sha || null;\n\nlet scoreMap = {};\n\nif (groqItem) {\n  try {\n    const raw = groqItem.json.choices[0].message.content;\n\n    const clean = raw\n      .replace(/```json/g, '')\n      .replace(/```/g, '')\n      .trim();\n\n    JSON.parse(clean).forEach(s => {\n      if (s.hash) {\n        scoreMap[s.hash] = Math.min(\n          100,\n          Math.max(0, Number(s.score))\n        );\n      }\n    });\n  } catch (e) {}\n}\n\nconst scored = fresh.map(j => {\n\n  if (scoreMap[j.hash] !== undefined) {\n    return {\n      ...j,\n      relevance_score: scoreMap[j.hash]\n    };\n  }\n\n  const t = (j.title || '').toLowerCase();\n\n  let s = 42;\n\n  if (/\\b(llm|large language model|generative ai|gen ai)\\b/.test(t))\n    s = 88;\n  else if (/\\b(nlp|natural language processing)\\b/.test(t))\n    s = 83;\n  else if (/\\b(machine learning engineer|ml engineer)\\b/.test(t))\n    s = 78;\n  else if (/\\b(ai engineer|artificial intelligence)\\b/.test(t))\n    s = 75;\n  else if (/\\b(deep learning|neural network)\\b/.test(t))\n    s = 72;\n  else if (/\\b(computer vision)\\b/.test(t))\n    s = 70;\n  else if (/\\b(data scientist|data science)\\b/.test(t))\n    s = 67;\n\n  if (/intern/i.test(j.job_type || j.title || ''))\n    s = Math.min(100, s + 8);\n\n  if (/remote/i.test(j.location || ''))\n    s = Math.min(100, s + 5);\n\n  return {\n    ...j,\n    relevance_score: s\n  };\n});\n\nconst allRanked = scored.sort(\n  (a, b) => b.relevance_score - a.relevance_score\n);\n\nconst merged = [\n  ...allRanked,\n  ...existing\n].slice(0, 2000);\n\nconst db = {\n  metadata: {\n    last_updated: new Date().toISOString(),\n    total_jobs: merged.length,\n    new_today: allRanked.length\n  },\n  jobs: merged\n};\n\nconst payload = {\n  message:\n    'auto: job sync ' +\n    new Date().toISOString().slice(0, 10) +\n    ' (' +\n    allRanked.length +\n    ' new)',\n\n  content: Buffer\n    .from(JSON.stringify(db, null, 2))\n    .toString('base64'),\n\n  branch: 'state'\n};\n\n// IMPORTANT\nif (sha) {\n  payload.sha = sha;\n}\n\nreturn [{\n  json: {\n    github_payload: payload,\n    sha_debug: sha,\n    new_jobs: allRanked.length,\n    total: merged.length,\n    top5: allRanked.slice(0, 5)\n  }\n}];"
+      },
+      "id": "93995e6b-9250-4db5-b548-c54b5a6e8c2d",
+      "name": "Apply Scores and Commit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        144
+      ]
+    },
+    {
       "parameters": {
         "method": "PUT",
-        "url": "=https://api.github.com/repos/{{ $env.GITHUB_REPO_OWNER }}/{{ $env.GITHUB_REPO_NAME }}/contents/data/jobs.json",
-        "headers": {
+        "url": "https://api.github.com/repos/[GITHUB_USERNAME]/ai-job-intelligence/contents/data/jobs.json",
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+              "value": "Bearer <GITHUB_TOKEN_REDACTED>"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
             },
             {
               "name": "Accept",
@@ -351,63 +320,78 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json.github_payload }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
-        }
-      }
+        "options": {}
+      },
+      "id": "6dffdd02-5961-487d-a6d7-1c781e3c5990",
+      "name": "Commit Jobs to GitHub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2336,
+        144
+      ]
     },
     {
-      "id": "a1000000-0000-4000-8000-000000000018",
-      "name": "Log No New Jobs",
+      "parameters": {
+        "jsCode": "\nconst d = $input.first().json;\nconsole.log('=== AGENT 1 COMPLETE ===');\nconsole.log('New: ' + d.new_jobs + ' | Total DB: ' + d.total);\nif (d.top5 && d.top5[0]) {\n  const t = d.top5[0];\n  console.log('Top: \"' + t.title + '\" @ ' + t.company +\n    ' | Score:' + t.relevance_score + ' | ID:' + t.job_id);\n}\nreturn [{ json: { status: 'success', new_jobs: d.new_jobs,\n  total: d.total, completed_at: new Date().toISOString() } }];\n"
+      },
+      "id": "8ffefa1b-8ab3-44a6-91f9-31523b492865",
+      "name": "Log Agent 1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1360,
-        460
-      ],
-      "parameters": {
-        "jsCode": "return [{ json: { status: 'no_new_jobs', timestamp: new Date().toISOString() } }];"
-      }
+        2592,
+        144
+      ]
     },
     {
-      "id": "a1000000-0000-4000-8000-000000000019",
-      "name": "Log Agent 1 Done",
+      "parameters": {
+        "jsCode": "function makeId(title, company) {\n  return 'j_' +\n    (\n      title.toLowerCase().replace(/[^a-z0-9]/g, '') +\n      company.toLowerCase().replace(/[^a-z0-9]/g, '')\n    ).slice(0, 16);\n}\n\nconst now = new Date().toISOString();\nconst body = $input.first().json.body || '';\n\nif (body.length < 100) {\n  return [{ json: { _sentinel: true, source: 'internshala' } }];\n}\n\nconst jobs = [];\n\nconst cardRegex = /<div[^>]*(?:internship_card|internship-listing-card|individual_internship)[^>]*>([\\s\\S]*?)<\\/div>/gi;\n\nlet match;\n\nwhile ((match = cardRegex.exec(body)) !== null) {\n  const block = match[1];\n\n  const title =\n    (block.match(/profile-name[^>]*>([^<]+)/i)?.[1] ||\n     block.match(/job-internship-name[^>]*>([^<]+)/i)?.[1] ||\n     '').trim();\n\n  const company =\n    (block.match(/company-name[^>]*>([^<]+)/i)?.[1] || '').trim();\n\n  const location =\n    (block.match(/location-link[^>]*>([^<]+)/i)?.[1] ||\n     block.match(/location[^>]*>([^<]+)/i)?.[1] ||\n     'India').trim();\n\n  const stipend =\n    (block.match(/stipend[^>]*>([^<]+)/i)?.[1] ||\n     block.match(/stipend-value[^>]*>([^<]+)/i)?.[1] ||\n     '').trim() || null;\n\n  const href =\n    block.match(/href=\"([^\"]*\\/internship\\/[^\"]*)\"/i)?.[1] || null;\n\n  if (!title || !company) continue;\n\n  const id = makeId(title, company);\n\n  jobs.push({\n    job_id: id,\n    source: 'internshala',\n    title,\n    company,\n    location,\n    stipend,\n    job_url: href\n      ? (href.startsWith('http')\n          ? href\n          : 'https://internshala.com' + href)\n      : null,\n    job_type: 'internship',\n    hash: id.slice(2),\n    date_found: now,\n    date_scraped: now,\n    date_posted: now,\n    description_text: '',\n    skills_required: [],\n    relevance_score: 0,\n    status: 'new',\n    tags: []\n  });\n}\n\nif (!jobs.length) {\n  return [{ json: { _sentinel: true, source: 'internshala' } }];\n}\n\nreturn jobs.map(j => ({ json: j }));"
+      },
+      "id": "09da21d6-5815-4694-8cc0-c36ba996912f",
+      "name": "Parse Internshala ML",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2240,
-        240
-      ],
+        784,
+        -64
+      ]
+    },
+    {
       "parameters": {
-        "jsCode": "return [{ json: { status: 'agent1_complete', job_count: items[0].json.content ? 'committed' : 'done', timestamp: new Date().toISOString() } }];"
-      }
+        "numberInputs": 5
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1072,
+        32
+      ],
+      "id": "0b4c3f2c-9ee2-4de3-bb6d-396f1bd82d3f",
+      "name": "Merge"
     }
   ],
   "connections": {
-    "Every Morning 7 AM IST": {
+    "Schedule 7:00 AM IST": {
       "main": [
         [
           {
-            "node": "Fetch Internshala AI",
+            "node": "Scrape Internshala AI",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Fetch Internshala ML",
+            "node": "Scrape Internshala ML",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Fetch RemoteOK",
+            "node": "Scrape RemoteOK",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Fetch HN Jobs",
+            "node": "Scrape HN Jobs",
             "type": "main",
             "index": 0
           },
@@ -419,7 +403,7 @@
         ]
       ]
     },
-    "Fetch Internshala AI": {
+    "Scrape Internshala AI": {
       "main": [
         [
           {
@@ -430,18 +414,7 @@
         ]
       ]
     },
-    "Parse Internshala AI": {
-      "main": [
-        [
-          {
-            "node": "Merge All Sources",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fetch Internshala ML": {
+    "Scrape Internshala ML": {
       "main": [
         [
           {
@@ -452,18 +425,7 @@
         ]
       ]
     },
-    "Parse Internshala ML": {
-      "main": [
-        [
-          {
-            "node": "Merge All Sources",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Fetch RemoteOK": {
+    "Scrape RemoteOK": {
       "main": [
         [
           {
@@ -474,18 +436,7 @@
         ]
       ]
     },
-    "Parse RemoteOK": {
-      "main": [
-        [
-          {
-            "node": "Merge All Sources",
-            "type": "main",
-            "index": 2
-          }
-        ]
-      ]
-    },
-    "Fetch HN Jobs": {
+    "Scrape HN Jobs": {
       "main": [
         [
           {
@@ -496,33 +447,11 @@
         ]
       ]
     },
-    "Parse HN Jobs": {
+    "Parse Internshala AI": {
       "main": [
         [
           {
-            "node": "Merge All Sources",
-            "type": "main",
-            "index": 3
-          }
-        ]
-      ]
-    },
-    "Load Existing Jobs": {
-      "main": [
-        [
-          {
-            "node": "Merge All Sources",
-            "type": "main",
-            "index": 4
-          }
-        ]
-      ]
-    },
-    "Merge All Sources": {
-      "main": [
-        [
-          {
-            "node": "Deduplicate Jobs",
+            "node": "Merge",
             "type": "main",
             "index": 0
           }
@@ -533,25 +462,7 @@
       "main": [
         [
           {
-            "node": "Check Fresh Jobs Exist",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Check Fresh Jobs Exist": {
-      "main": [
-        [
-          {
             "node": "Build Groq Score Req",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Log No New Jobs",
             "type": "main",
             "index": 0
           }
@@ -573,14 +484,14 @@
       "main": [
         [
           {
-            "node": "Apply Scores",
+            "node": "Apply Scores and Commit",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Apply Scores": {
+    "Apply Scores and Commit": {
       "main": [
         [
           {
@@ -595,12 +506,75 @@
       "main": [
         [
           {
-            "node": "Log Agent 1 Done",
+            "node": "Log Agent 1",
             "type": "main",
             "index": 0
           }
         ]
       ]
+    },
+    "Parse Internshala ML": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse RemoteOK": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Parse HN Jobs": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Load Existing Jobs": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
     }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
   }
 }
