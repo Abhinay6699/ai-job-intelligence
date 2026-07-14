@@ -1,5 +1,17 @@
 [
   {
+    "job_id": "j_692a478f595e3220",
+    "title": "AI Intern (scraped)",
+    "company": "Internshala",
+    "location": "India",
+    "url": "https://internshala.com/internships/artificial-intelligence-internship/",
+    "source": "Internshala_AI",
+    "scraped_at": "2026-07-14T17:13:00.279Z",
+    "relevance_score": 85,
+    "score_reason": "The candidate's AI/ML coursework, transformer project, and Python deep‑learning skills align well with typical AI intern responsibilities.",
+    "scored_at": "2026-07-14T17:13:11.873Z"
+  },
+  {
     "job_id": "j_9999999999999",
     "title": "AI Intern (scraped)",
     "company": "Internshala",
