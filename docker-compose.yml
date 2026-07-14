@@ -1,0 +1,22 @@
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n
+
+    ports:
+      - "5678:5678"
+
+    env_file:
+      - C:\Users\nagna\n8n.env
+
+    environment:
+      - NODE_FUNCTION_ALLOW_BUILTIN=crypto,buffer
+      - NODE_FUNCTION_ALLOW_EXTERNAL=*
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - N8N_WEBHOOK_URL=http://localhost:5678
+
+
+    volumes:
+      - C:\Users\nagna\.n8n:/home/node/.n8n
+
+    restart: unless-stopped

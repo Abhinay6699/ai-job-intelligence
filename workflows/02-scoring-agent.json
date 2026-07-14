@@ -1,0 +1,508 @@
+{
+  "id": "agent2resumegen",
+  "name": "Agent 2 - Resume Generator & ATS Scorer",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata"
+  },
+  "nodes": [
+    {
+      "id": "a2000000-0000-4000-8000-000000000001",
+      "name": "Every Morning 8 AM IST",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        400
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 2 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000002",
+      "name": "Fetch Jobs from GitHub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        400
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $env.GITHUB_REPO_OWNER }}/{{ $env.GITHUB_REPO_NAME }}/contents/data/jobs.json?ref=state",
+        "headers": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000003",
+      "name": "Extract Top 5 Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        400
+      ],
+      "parameters": {
+        "jsCode": "const raw = items[0].json;\nlet jobs = [];\ntry {\n  const decoded = Buffer.from(raw.content, 'base64').toString('utf8');\n  jobs = JSON.parse(decoded);\n  if (!Array.isArray(jobs)) jobs = [];\n} catch (e) {\n  jobs = [];\n}\n\njobs.sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));\nconst top5 = jobs.slice(0, 5);\n\nreturn top5.map(j => ({ json: j }));"
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000004",
+      "name": "SplitInBatches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        660,
+        400
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000005",
+      "name": "Build Keyword Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        400
+      ],
+      "parameters": {
+        "jsCode": "const job = items[0].json;\n\nconst prompt = `Extract the top 15 ATS keywords from this job posting for a resume tailoring exercise.\\nJob Title: ${job.title}\\nCompany: ${job.company}\\nSource: ${job.source}\\nDescription: ${job.description || 'No description provided \u2014 infer from title and company.'}\\n\\nReturn ONLY a JSON object with one field: keywords (array of 15 strings). No other text.`;\n\nreturn [{\n  json: {\n    _pt: job,\n    groq_request: {\n      model: 'openai/gpt-oss-120b',\n      messages: [\n        { role: 'system', content: 'You are an expert ATS keyword extractor. Return only valid JSON.' },\n        { role: 'user', content: prompt }\n      ],\n      temperature: 0.1,\n      max_tokens: 512\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000006",
+      "name": "Groq Extract Keywords",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.groq_request }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000007",
+      "name": "Parse KW \u2014 Build Resume Req",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        400
+      ],
+      "parameters": {
+        "jsCode": "const groqResp = items[0].json;\nconst ptData = $('Build Keyword Request').first().json._pt;\n\nlet keywords = [];\ntry {\n  const content = groqResp.choices[0].message.content;\n  const jsonMatch = content.match(/\\{.*\\}/s);\n  const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};\n  keywords = parsed.keywords || [];\n} catch (e) {\n  keywords = [];\n}\n\nconst candidateProfile = `[CANDIDATE NAME]\\nEmail: [CANDIDATE_EMAIL@EXAMPLE.COM] | Phone: [PHONE NUMBER]\\nGitHub: github.com/[GITHUB_USERNAME] | Location: Guntur, Andhra Pradesh\\nB.Tech AI & Machine Learning, VVIT Guntur, CGPA 8.35, Graduating Sep 2026\\n\\nProjects:\\n1. EMERALD \u2014 ~10M param GPT-style decoder-only transformer, PyTorch, custom BPE tokenizer, Wikipedia training, Flask inference server, live at abhinay7.netlify.app\\n2. Fake News Detection \u2014 TensorFlow + NLTK/SpaCy, TF-IDF + semantic features, Flask REST API\\n3. AI Crop Prediction \u2014 Scikit-learn (22 crops), FastAPI backend, Flutter mobile app\\n4. Binance Trading Bot \u2014 Typer CLI, httpx, HMAC-SHA256\\n\\nSkills: Python, PyTorch, TensorFlow, Scikit-learn, Flask, FastAPI, NLTK, SpaCy, Pandas, NumPy, Flutter, Dart, JavaScript, n8n\\nCertifications: NPTEL Elite \u2014 Introduction to Large Language Models\\nLeadership: ACM Membership Chair VVIT | SIH 2025 Internal Selection`;\n\nconst prompt = `Generate a highly professional, tailored resume for the following job. Incorporate the provided keywords naturally into bullet points.\\n\\nCRITICAL RESUME RULES:\\n1. Use the Harvard Business School resume format: Action Verb + Task + Quantifiable Result.\\n2. NO fluff, NO clich\u00e9s (do not use vague words like \"passionate\", \"innovative\", \"hard-working\").\\n3. Output the resume in pure Markdown format (.md). Use # for headers, ** for bolding key tech/metrics, and bullet points for experiences.\\n4. Keep the tone strictly professional, objective, and impact-driven.\\n\\nJob Title: ${ptData.title}\\nCompany: ${ptData.company}\\nATS Keywords to incorporate: ${keywords.join(', ')}\\n\\nCandidate Profile:\\n${candidateProfile}\\n\\nOutput ONLY the Markdown resume, no conversational text.`;\n\nreturn [{\n  json: {\n    _pt: ptData,\n    keywords,\n    groq_request: {\n      model: 'openai/gpt-oss-120b',\n      messages: [\n        { role: 'system', content: 'You are an expert resume writer who creates ATS-optimized, Harvard-style resumes. Output strictly in Markdown format.' },\n        { role: 'user', content: prompt }\n      ],\n      temperature: 0.3,\n      max_tokens: 2048\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000008",
+      "name": "Groq Generate Resume",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.groq_request }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000009",
+      "name": "Parse Resume \u2014 Build ATS Req",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        400
+      ],
+      "parameters": {
+        "jsCode": "const groqResp = items[0].json;\nconst ptData = $('Parse KW \u2014 Build Resume Req').first().json._pt;\nconst keywords = $('Parse KW \u2014 Build Resume Req').first().json.keywords;\n\nlet resumeText = '';\ntry {\n  resumeText = groqResp.choices[0].message.content || '';\n} catch (e) {\n  resumeText = '';\n}\n\nconst prompt = `You are an ATS scoring expert. Score how well the following resume matches the target job.\\n\\nJob Title: ${ptData.title}\\nCompany: ${ptData.company}\\nRequired Keywords: ${keywords.join(', ')}\\n\\nResume:\\n${resumeText.slice(0, 3000)}\\n\\nReturn ONLY a JSON object with these fields:\\n- overall_score: integer 0-100\\n- keyword_match_rate: float 0-1\\n- matched_keywords: array of matched keyword strings\\n- missing_keywords: array of missing keyword strings\\n- strengths: array of 3 strength strings\\n- improvements: array of 3 improvement strings\\n\\nReturn only the JSON, no other text.`;\n\nreturn [{\n  json: {\n    _pt: ptData,\n    resume_text: resumeText,\n    groq_request: {\n      model: 'openai/gpt-oss-120b',\n      messages: [\n        { role: 'system', content: 'You are an expert ATS resume scorer. Return only valid JSON.' },\n        { role: 'user', content: prompt }\n      ],\n      temperature: 0.1,\n      max_tokens: 1024\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000010",
+      "name": "Groq Score ATS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.groq_request }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000011",
+      "name": "Compile Package",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        400
+      ],
+      "parameters": {
+        "jsCode": "const groqResp = items[0].json;\nconst ptData = $('Parse Resume \u2014 Build ATS Req').first().json._pt;\nconst resumeText = $('Parse Resume \u2014 Build ATS Req').first().json.resume_text;\n\nlet atsReport = {};\ntry {\n  const content = groqResp.choices[0].message.content;\n  const jsonMatch = content.match(/\\{.*\\}/s);\n  atsReport = jsonMatch ? JSON.parse(jsonMatch[0]) : {};\n} catch (e) {\n  atsReport = { overall_score: 0, error: 'parse_failed' };\n}\n\natsReport.job_id = ptData.job_id;\natsReport.job_title = ptData.title;\natsReport.company = ptData.company;\natsReport.scored_at = new Date().toISOString();\n\nconst resumeB64 = Buffer.from(resumeText).toString('base64');\nconst atsB64 = Buffer.from(JSON.stringify(atsReport, null, 2)).toString('base64');\n\nreturn [{\n  json: {\n    job_id: ptData.job_id,\n    job_title: ptData.title,\n    company: ptData.company,\n    resume_text: resumeText,\n    resume_b64: resumeB64,\n    ats_report: atsReport,\n    ats_b64: atsB64\n  }\n}];"
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000012",
+      "name": "Prep Resume Store",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        280
+      ],
+      "parameters": {
+        "jsCode": "const pkg = items[0].json;\nreturn [{\n  json: {\n    github_payload: {\n      message: `Add resume for ${pkg.job_id}`,\n      content: pkg.resume_b64,\n      branch: 'state'\n    },\n    job_id: pkg.job_id,\n    ats_report: pkg.ats_report,\n    ats_b64: pkg.ats_b64\n  }\n}];"
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000013",
+      "name": "Prep ATS Store",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        520
+      ],
+      "parameters": {
+        "jsCode": "const pkg = items[0].json;\nreturn [{\n  json: {\n    github_payload: {\n      message: `Add ATS report for ${pkg.job_id}`,\n      content: pkg.ats_b64,\n      branch: 'state'\n    },\n    job_id: pkg.job_id\n  }\n}];"
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000014",
+      "name": "Store Resume",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        280
+      ],
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.github.com/repos/{{ $env.GITHUB_REPO_OWNER }}/{{ $env.GITHUB_REPO_NAME }}/contents/data/resumes/{{ $json.job_id }}_resume.md",
+        "headers": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.github_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000015",
+      "name": "Store ATS Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        520
+      ],
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.github.com/repos/{{ $env.GITHUB_REPO_OWNER }}/{{ $env.GITHUB_REPO_NAME }}/contents/data/ats_reports/{{ $json.job_id }}_ats_report.json",
+        "headers": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.github_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "a2000000-0000-4000-8000-000000000016",
+      "name": "Log Agent 2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        400
+      ],
+      "parameters": {
+        "jsCode": "return [{ json: { status: 'agent2_job_processed', timestamp: new Date().toISOString() } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Every Morning 8 AM IST": {
+      "main": [
+        [
+          {
+            "node": "Fetch Jobs from GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Jobs from GitHub": {
+      "main": [
+        [
+          {
+            "node": "Extract Top 5 Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Top 5 Jobs": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SplitInBatches": {
+      "main": [
+        [
+          {
+            "node": "Build Keyword Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build Keyword Request": {
+      "main": [
+        [
+          {
+            "node": "Groq Extract Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Extract Keywords": {
+      "main": [
+        [
+          {
+            "node": "Parse KW \u2014 Build Resume Req",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse KW \u2014 Build Resume Req": {
+      "main": [
+        [
+          {
+            "node": "Groq Generate Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Generate Resume": {
+      "main": [
+        [
+          {
+            "node": "Parse Resume \u2014 Build ATS Req",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Resume \u2014 Build ATS Req": {
+      "main": [
+        [
+          {
+            "node": "Groq Score ATS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Score ATS": {
+      "main": [
+        [
+          {
+            "node": "Compile Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Package": {
+      "main": [
+        [
+          {
+            "node": "Prep Resume Store",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prep ATS Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Resume Store": {
+      "main": [
+        [
+          {
+            "node": "Store Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep ATS Store": {
+      "main": [
+        [
+          {
+            "node": "Store ATS Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Resume": {
+      "main": [
+        [
+          {
+            "node": "Log Agent 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store ATS Report": {
+      "main": [
+        [
+          {
+            "node": "Log Agent 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

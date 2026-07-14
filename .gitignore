@@ -1,0 +1,23 @@
+# Environment variables
+.env
+.env.production
+.env.local
+
+# n8n local data
+n8n-data/
+n8n_data/
+.n8n/
+
+# Python/Node (if used locally)
+__pycache__/
+node_modules/
+*.pyc
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Any accidental credential exports
+credentials.json
+*.pem
+*.key
